@@ -163,22 +163,39 @@ function download(content, filename, type = 'text/csv') {
   URL.revokeObjectURL(url)
 }
 
+function csvCell(value) {
+  if (value === null || value === undefined) return ''
+
+  const stringValue = String(value)
+  const safeValue = typeof value === 'string' && /^[=+\-@\t\r]/.test(stringValue)
+    ? `'${stringValue}`
+    : stringValue
+
+  return /[",\r\n]/.test(safeValue)
+    ? `"${safeValue.replace(/"/g, '""')}"`
+    : safeValue
+}
+
+function csvRows(rows) {
+  return rows.map(row => row.map(csvCell).join(',')).join('\n')
+}
+
 export function exportReposCSV(repos) {
   const header = ['Repository', 'Org', 'Stars', 'Forks', 'Open Issues', 'Health Score', 'Activity Classification', 'Language', 'Last Active']
   const rows = repos.map(r => [r.name, r.orgLogin, r.stargazers_count, r.forks_count, r.open_issues_count, r.healthScore, r.activityClassification, r.language || 'N/A', r.pushed_at?.slice(0, 10)])
-  download([header, ...rows].map(r => r.join(',')).join('\n'), 'orgexplorer-repos.csv')
+  download(csvRows([header, ...rows]), 'orgexplorer-repos.csv')
 }
 
 export function exportContributorsCSV(contributors) {
   const header = ['Login', 'Total Contributions', 'Repos', 'Orgs', 'Last Active', 'Connector', 'Cross-Org']
   const rows = contributors.map(c => [c.login, c.totalContribs, c.repos.length, c.orgs.length, c.lastActive?.slice(0, 10) || '', c.isConnector, c.isCrossOrg])
-  download([header, ...rows].map(r => r.join(',')).join('\n'), 'orgexplorer-contributors.csv')
+  download(csvRows([header, ...rows]), 'orgexplorer-contributors.csv')
 }
 
 export function exportTrendsCSV(series) {
   const header = ['Date', 'PRs Created', 'PRs Merged', 'PRs Closed', 'Issues Created', 'Issues Closed']
   const rows = series.map(s => [s.date, s.prs_created, s.prs_merged, s.prs_closed, s.issues_created, s.issues_closed])
-  download([header, ...rows].map(r => r.join(',')).join('\n'), 'orgexplorer-trends.csv')
+  download(csvRows([header, ...rows]), 'orgexplorer-trends.csv')
 }
 
 export function getTopRepositories(repos, limit = 10) {
